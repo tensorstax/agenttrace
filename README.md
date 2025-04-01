@@ -20,7 +20,7 @@ cd agenttrace
 pip install -e .
 ```
 
-## Web Dashboard
+## Web App
 
 AgentTrace includes a web dashboard for visualizing and analyzing your traces and evaluations.
 
