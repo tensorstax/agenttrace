@@ -18,6 +18,10 @@ import {
   SelectChangeEvent,
   Chip,
   Tooltip,
+  IconButton,
+  DialogActions,
+  Alert,
+  Snackbar,
 } from '@mui/material';
 import { GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 import { format, parseISO } from 'date-fns';
@@ -29,13 +33,15 @@ import {
   getEvalResults, 
   getEvalEvents, 
   getEvalIds, 
-  getEvalNames 
+  getEvalNames,
+  deleteEval
 } from '../services/api';
 import DataTable from '../components/DataTable';
 import JsonViewer from '../components/JsonViewer';
 import LoadingIndicator from '../components/LoadingIndicator';
 import ToolUsagePanel from '../components/ToolUsagePanel';
 import CodeViewer from '../components/CodeViewer';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -76,9 +82,20 @@ const Evaluations: React.FC = () => {
   const [evalIdFilter, setEvalIdFilter] = useState<string>('');
   const [nameFilter, setNameFilter] = useState<string>('');
   const [toolTrackingFilter, setToolTrackingFilter] = useState<string>('all');
+  // Add new filter states
+  const [scoreRangeFilter, setScoreRangeFilter] = useState<string>('all');
+  const [toolStatusFilter, setToolStatusFilter] = useState<string>('all');
 
   // New state for dynamic data sections
   const [dataSections, setDataSections] = useState<{ key: string; title: string }[]>([]);
+
+  // Add new states for delete confirmation dialog
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [evalToDelete, setEvalToDelete] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
 
   useEffect(() => {
     const fetchFilterOptions = async () => {
@@ -107,14 +124,135 @@ const Evaluations: React.FC = () => {
           nameFilter || undefined
         );
         
-        // Filter results based on tool tracking status
+        // Filter results based on various criteria
         let filteredResults = response.results;
         
+        // Filter based on tool tracking status
         if (toolTrackingFilter !== 'all') {
           const isToolTrackingEnabled = toolTrackingFilter === 'enabled';
           filteredResults = filteredResults.filter(result => {
             const hasToolTracking = result.metadata?.track_tools === true;
             return hasToolTracking === isToolTrackingEnabled;
+          });
+        }
+        
+        // Filter based on score range
+        if (scoreRangeFilter !== 'all') {
+          filteredResults = filteredResults.filter(result => {
+            // Get score from tool_summary if available
+            if (result.tool_summary && result.tool_summary.score !== null && result.tool_summary.score !== undefined) {
+              const score = result.tool_summary.score;
+              
+              switch (scoreRangeFilter) {
+                case 'perfect':
+                  return score === 1;
+                case 'high':
+                  return score >= 0.8 && score < 1;
+                case 'medium':
+                  return score >= 0.5 && score < 0.8;
+                case 'low':
+                  return score < 0.5;
+                default:
+                  return true;
+              }
+            }
+            
+            // If no tool_summary score, try to calculate from eval_results
+            if (result.eval_results && Array.isArray(result.eval_results) && result.eval_results.length > 0) {
+              // Check if we have scoring data
+              const firstResult = result.eval_results[0];
+              if (!firstResult.scores) return scoreRangeFilter === 'unknown';
+              
+              // Calculate average score
+              const scoringFunctions = Object.keys(firstResult.scores);
+              if (scoringFunctions.length === 0) return scoreRangeFilter === 'unknown';
+              
+              let totalScore = 0;
+              let scoreCount = 0;
+              
+              result.eval_results.forEach(evalResult => {
+                scoringFunctions.forEach(funcName => {
+                  if (!evalResult.scores || !evalResult.scores[funcName]) return;
+                  
+                  const score = evalResult.scores[funcName];
+                  if (typeof score === 'number') {
+                    totalScore += score;
+                    scoreCount++;
+                  } else if (typeof score === 'object' && score !== null) {
+                    if ('score' in score && typeof score.score === 'number') {
+                      totalScore += score.score;
+                      scoreCount++;
+                    } else if ('success' in score && typeof score.success === 'boolean') {
+                      totalScore += score.success ? 1 : 0;
+                      scoreCount++;
+                    }
+                  }
+                });
+              });
+              
+              if (scoreCount > 0) {
+                const avgScore = totalScore / scoreCount;
+                
+                switch (scoreRangeFilter) {
+                  case 'perfect':
+                    return avgScore === 1;
+                  case 'high':
+                    return avgScore >= 0.8 && avgScore < 1;
+                  case 'medium':
+                    return avgScore >= 0.5 && avgScore < 0.8;
+                  case 'low':
+                    return avgScore < 0.5;
+                  default:
+                    return true;
+                }
+              }
+              
+              return scoreRangeFilter === 'unknown';
+            }
+            
+            // No score found
+            return scoreRangeFilter === 'unknown';
+          });
+        }
+        
+        // Filter based on tool status
+        if (toolStatusFilter !== 'all') {
+          filteredResults = filteredResults.filter(result => {
+            // Determine if there are any successful tool calls
+            const hasSuccess = result.tool_summary && result.tool_summary.successful_tool_calls > 0;
+            const hasFailed = result.tool_summary && 
+                              result.tool_summary.total_tool_calls > 0 && 
+                              result.tool_summary.successful_tool_calls < result.tool_summary.total_tool_calls;
+            
+            // Alternative check for newer format
+            let newFormatHasSuccess = false;
+            let newFormatHasFailed = false;
+            
+            if (result.eval_results && Array.isArray(result.eval_results)) {
+              for (const evalResult of result.eval_results) {
+                if (evalResult.tool_info) {
+                  const toolSuccess = evalResult.tool_info.tool_evals && 
+                                    evalResult.tool_info.tool_evals.some((toolEval: { success: boolean }) => toolEval.success);
+                  
+                  if (toolSuccess) newFormatHasSuccess = true;
+                  else newFormatHasFailed = true;
+                }
+              }
+            }
+            
+            switch (toolStatusFilter) {
+              case 'all_success':
+                return (hasSuccess && !hasFailed) || (newFormatHasSuccess && !newFormatHasFailed);
+              case 'partial_success':
+                return (hasSuccess && hasFailed) || (newFormatHasSuccess && newFormatHasFailed);
+              case 'all_failed':
+                return (!hasSuccess && hasFailed) || (!newFormatHasSuccess && newFormatHasFailed);
+              case 'no_tools':
+                return (!result.tool_summary || result.tool_summary.total_tool_calls === 0) && 
+                       (!result.eval_results || !result.eval_results.some(r => r.tool_info));
+              default:
+                return true;
+            }
           });
         }
         
@@ -127,7 +265,7 @@ const Evaluations: React.FC = () => {
     };
 
     fetchEvaluations();
-  }, [evalIdFilter, nameFilter, toolTrackingFilter]);
+  }, [evalIdFilter, nameFilter, toolTrackingFilter, scoreRangeFilter, toolStatusFilter]);
 
   const handleEvalIdChange = (event: SelectChangeEvent) => {
     setEvalIdFilter(event.target.value);
@@ -141,10 +279,20 @@ const Evaluations: React.FC = () => {
     setToolTrackingFilter(event.target.value);
   };
 
+  const handleScoreRangeFilterChange = (event: SelectChangeEvent) => {
+    setScoreRangeFilter(event.target.value);
+  };
+
+  const handleToolStatusFilterChange = (event: SelectChangeEvent) => {
+    setToolStatusFilter(event.target.value);
+  };
+
   const handleResetFilters = () => {
     setEvalIdFilter('');
     setNameFilter('');
     setToolTrackingFilter('all');
+    setScoreRangeFilter('all');
+    setToolStatusFilter('all');
   };
 
   // Function to parse evaluation data and identify its key sections
@@ -230,6 +378,135 @@ const Evaluations: React.FC = () => {
     },
     { field: 'name', headerName: 'Name', width: 180, flex: 0.5 },
     { field: 'trial_count', headerName: 'Trials', type: 'number', width: 80 },
+    {
+      field: 'score',
+      headerName: 'Score',
+      width: 120,
+      flex: 0.3,
+      renderCell: (params: GridRenderCellParams<EvalResult>) => {
+        const evalData = params.row;
+        
+        // Try to get score from tool_summary for tool-based evaluations
+        if (evalData.tool_summary && evalData.tool_summary.score !== null && evalData.tool_summary.score !== undefined) {
+          const score = evalData.tool_summary.score;
+          
+          // Determine color based on score value (assuming scores are between 0 and 1)
+          let scoreColor = 'success.main';
+          if (score < 0.5) {
+            scoreColor = 'error.main';
+          } else if (score < 0.8) {
+            scoreColor = 'warning.main';
+          }
+          
+          return (
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center',
+              bgcolor: `${scoreColor}20`,
+              borderRadius: 1.5,
+              px: 1.2,
+              py: 0.3,
+              border: '1px solid',
+              borderColor: scoreColor
+            }}>
+              <Typography 
+                variant="body2" 
+                fontWeight="medium"
+                color={scoreColor}
+                fontSize="0.8rem"
+              >
+                {typeof score === 'number' ? score.toFixed(2).replace(/\.00$/, '') : score}
+              </Typography>
+            </Box>
+          );
+        }
+        
+        // Try to get the average score across all results if available
+        if (evalData.eval_results && Array.isArray(evalData.eval_results) && evalData.eval_results.length > 0) {
+          // Look for score fields in the first result to find scoring functions
+          const firstResult = evalData.eval_results[0];
+          if (!firstResult.scores) return "N/A";
+          
+          // Calculate average scores for each scoring function
+          const scoringFunctions = Object.keys(firstResult.scores || {});
+          if (scoringFunctions.length === 0) return "N/A";
+          
+          const averageScores = {};
+          let totalScore = 0;
+          let scoreCount = 0;
+          
+          // Find all numeric scores and average them
+          scoringFunctions.forEach(funcName => {
+            let sum = 0;
+            let count = 0;
+            
+            evalData.eval_results?.forEach(result => {
+              if (!result.scores || !result.scores[funcName]) return;
+              
+              const score = result.scores[funcName];
+              // Only include numeric scores or success objects
+              if (typeof score === 'number') {
+                sum += score;
+                count++;
+              } else if (typeof score === 'object' && score !== null) {
+                // For objects with a success property (like tool evaluations)
+                if ('score' in score && typeof score.score === 'number') {
+                  sum += score.score;
+                  count++;
+                } else if ('success' in score && typeof score.success === 'boolean') {
+                  sum += score.success ? 1 : 0;
+                  count++;
+                }
+              }
+            });
+            
+            if (count > 0) {
+              const avg = sum / count;
+              averageScores[funcName] = avg;
+              totalScore += avg;
+              scoreCount++;
+            }
+          });
+          
+          // If we have any scores, calculate the final average
+          if (scoreCount > 0) {
+            const finalScore = totalScore / scoreCount;
+            
+            // Determine color based on score value (assuming scores are between 0 and 1)
+            let scoreColor = 'success.main';
+            if (finalScore < 0.5) {
+              scoreColor = 'error.main';
+            } else if (finalScore < 0.8) {
+              scoreColor = 'warning.main';
+            }
+            
+            return (
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center',
+                bgcolor: `${scoreColor}20`,
+                borderRadius: 1.5,
+                px: 1.2,
+                py: 0.3,
+                border: '1px solid',
+                borderColor: scoreColor
+              }}>
+                <Typography 
+                  variant="body2" 
+                  fontWeight="medium"
+                  color={scoreColor}
+                  fontSize="0.8rem"
+                >
+                  {typeof finalScore === 'number' ? finalScore.toFixed(2).replace(/\.00$/, '') : finalScore}
+                </Typography>
+              </Box>
+            );
+          }
+        }
+        
+        return "N/A";
+      }
+    },
     {
       field: 'tools_passed',
       headerName: 'Tools Passed',
@@ -766,27 +1043,36 @@ const Evaluations: React.FC = () => {
     {
       field: 'actions',
       headerName: 'Actions',
-      width: 100,
+      width: 160,
       sortable: false,
       renderCell: (params: GridRenderCellParams<EvalResult>) => {
         return (
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={() => handleViewDetails(params.row)}
-            sx={{
-              borderColor: 'rgba(255, 255, 255, 0.23)',
-              color: 'white',
-              '&:hover': {
-                borderColor: '#FF6325',
-                backgroundColor: 'rgba(255, 99, 37, 0.08)'
-              }
-            }}
-          >
-            View
-          </Button>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => handleViewDetails(params.row)}
+              sx={{
+                borderColor: 'rgba(255, 255, 255, 0.23)',
+                color: 'white',
+                '&:hover': {
+                  borderColor: '#FF6325',
+                  backgroundColor: 'rgba(255, 99, 37, 0.08)'
+                }
+              }}
+            >
+              View
+            </Button>
+            <IconButton 
+              aria-label="delete" 
+              size="small"
+              onClick={(e) => openDeleteConfirm(params.row.id, e)}
+            >
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          </Box>
         );
-      },
+      }
     },
   ];
 
@@ -817,6 +1103,48 @@ const Evaluations: React.FC = () => {
     { field: 'trial', headerName: 'Trial', type: 'number', width: 100 },
   ];
 
+  // Add a new function to handle evaluation deletion
+  const handleDeleteEval = async () => {
+    if (!evalToDelete) return;
+    
+    try {
+      setDeleteLoading(true);
+      const response = await deleteEval(evalToDelete);
+      
+      if (response.success) {
+        // Remove the deleted evaluation from the list
+        setEvalResults(prevResults => prevResults.filter(evaluation => evaluation.id !== evalToDelete));
+        setSnackbarMessage('Evaluation deleted successfully');
+        setSnackbarSeverity('success');
+        
+        // If the deleted evaluation is currently open, close the dialog
+        if (selectedEval && selectedEval.id === evalToDelete) {
+          setOpenDialog(false);
+          setSelectedEval(null);
+        }
+      } else {
+        setSnackbarMessage(response.error || 'Failed to delete evaluation');
+        setSnackbarSeverity('error');
+      }
+    } catch (error) {
+      console.error('Error deleting evaluation:', error);
+      setSnackbarMessage('An error occurred while deleting the evaluation');
+      setSnackbarSeverity('error');
+    } finally {
+      setDeleteLoading(false);
+      setDeleteConfirmOpen(false);
+      setEvalToDelete(null);
+      setSnackbarOpen(true);
+    }
+  };
+
+  // Add function to open delete confirmation dialog
+  const openDeleteConfirm = (evalId: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    setEvalToDelete(evalId);
+    setDeleteConfirmOpen(true);
+  };
+
   return (
     <Box>
       <Typography variant="h4" gutterBottom>
@@ -838,6 +1166,18 @@ const Evaluations: React.FC = () => {
                 label="Evaluation ID"
                 onChange={handleEvalIdChange}
                 sx={{ minWidth: '250px' }}
+                MenuProps={{
+                  PaperProps: {
+                    sx: {
+                      bgcolor: 'rgba(30, 30, 30, 0.85)',
+                      backdropFilter: 'blur(12px)',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      borderRadius: '8px',
+                      boxShadow: '0 8px 16px rgba(0, 0, 0, 0.4)',
+                      maxHeight: '300px'
+                    }
+                  }
+                }}
               >
                 <MenuItem value="">
                   <em>None</em>
@@ -860,6 +1200,18 @@ const Evaluations: React.FC = () => {
                 label="Evaluation Name"
                 onChange={handleNameChange}
                 sx={{ minWidth: '250px' }}
+                MenuProps={{
+                  PaperProps: {
+                    sx: {
+                      bgcolor: 'rgba(30, 30, 30, 0.85)',
+                      backdropFilter: 'blur(12px)',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      borderRadius: '8px',
+                      boxShadow: '0 8px 16px rgba(0, 0, 0, 0.4)',
+                      maxHeight: '300px'
+                    }
+                  }
+                }}
               >
                 <MenuItem value="">
                   <em>None</em>
@@ -882,10 +1234,85 @@ const Evaluations: React.FC = () => {
                 label="Tool Tracking"
                 onChange={handleToolTrackingFilterChange}
                 sx={{ minWidth: '250px' }}
+                MenuProps={{
+                  PaperProps: {
+                    sx: {
+                      bgcolor: 'rgba(30, 30, 30, 0.85)',
+                      backdropFilter: 'blur(12px)',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      borderRadius: '8px',
+                      boxShadow: '0 8px 16px rgba(0, 0, 0, 0.4)',
+                      maxHeight: '300px'
+                    }
+                  }
+                }}
               >
                 <MenuItem value="all">All</MenuItem>
                 <MenuItem value="enabled">Enabled</MenuItem>
                 <MenuItem value="disabled">Disabled</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid sx={{ gridColumn: { xs: 'span 12', sm: 'span 6', md: 'span 4' } }}>
+            <FormControl fullWidth size="small">
+              <InputLabel id="score-range-select-label">Score Range</InputLabel>
+              <Select
+                labelId="score-range-select-label"
+                id="score-range-select"
+                value={scoreRangeFilter}
+                label="Score Range"
+                onChange={handleScoreRangeFilterChange}
+                sx={{ minWidth: '250px' }}
+                MenuProps={{
+                  PaperProps: {
+                    sx: {
+                      bgcolor: 'rgba(30, 30, 30, 0.85)',
+                      backdropFilter: 'blur(12px)',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      borderRadius: '8px',
+                      boxShadow: '0 8px 16px rgba(0, 0, 0, 0.4)',
+                      maxHeight: '300px'
+                    }
+                  }
+                }}
+              >
+                <MenuItem value="all">All Scores</MenuItem>
+                <MenuItem value="perfect">Perfect (1.0)</MenuItem>
+                <MenuItem value="high">High (0.8-0.99)</MenuItem>
+                <MenuItem value="medium">Medium (0.5-0.79)</MenuItem>
+                <MenuItem value="low">Low (&lt; 0.5)</MenuItem>
+                <MenuItem value="unknown">Unknown/No Score</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid sx={{ gridColumn: { xs: 'span 12', sm: 'span 6', md: 'span 4' } }}>
+            <FormControl fullWidth size="small">
+              <InputLabel id="tool-status-select-label">Tool Status</InputLabel>
+              <Select
+                labelId="tool-status-select-label"
+                id="tool-status-select"
+                value={toolStatusFilter}
+                label="Tool Status"
+                onChange={handleToolStatusFilterChange}
+                sx={{ minWidth: '250px' }}
+                MenuProps={{
+                  PaperProps: {
+                    sx: {
+                      bgcolor: 'rgba(30, 30, 30, 0.85)',
+                      backdropFilter: 'blur(12px)',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      borderRadius: '8px',
+                      boxShadow: '0 8px 16px rgba(0, 0, 0, 0.4)',
+                      maxHeight: '300px'
+                    }
+                  }
+                }}
+              >
+                <MenuItem value="all">All Tool Status</MenuItem>
+                <MenuItem value="all_success">All Successful</MenuItem>
+                <MenuItem value="partial_success">Partial Success</MenuItem>
+                <MenuItem value="all_failed">All Failed</MenuItem>
+                <MenuItem value="no_tools">No Tools Used</MenuItem>
               </Select>
             </FormControl>
           </Grid>
@@ -928,25 +1355,26 @@ const Evaluations: React.FC = () => {
         />
       )}
 
+      {/* Details dialog */}
       <Dialog
         open={openDialog}
         onClose={handleCloseDialog}
+        maxWidth="xl"
         fullWidth
-        maxWidth="lg"
-        scroll="paper"
         PaperProps={{
           sx: {
-            bgcolor: '#1E1E1E',
-            backdropFilter: 'blur(20px)',
-            boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.3)',
-            border: '1px solid rgba(255, 255, 255, 0.05)',
+            bgcolor: 'rgba(30, 30, 30, 0.85)',
+            backdropFilter: 'blur(16px)',
+            boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.5)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
             borderRadius: '16px',
             color: 'white',
           }
         }}
         BackdropProps={{
           sx: {
-            backgroundColor: 'rgba(0, 0, 0, 0.05)',
+            backgroundColor: 'rgba(0, 0, 0, 0.2)',
+            backdropFilter: 'blur(4px)',
           }
         }}
       >
@@ -956,31 +1384,57 @@ const Evaluations: React.FC = () => {
           py: 2,
           bgcolor: '#1E1E1E',
         }}>
-          Evaluation Details
-          {selectedEval && (
-            <Typography variant="subtitle2" color="rgba(255, 255, 255, 0.7)">
-              {selectedEval.name} - {format(parseISO(selectedEval.timestamp), 'yyyy-MM-dd HH:mm:ss')}
-            </Typography>
-          )}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box>
+              <Typography variant="h6">Evaluation Details</Typography>
+              {selectedEval && (
+                <Typography variant="subtitle2" color="rgba(255, 255, 255, 0.7)">
+                  {selectedEval.name} - {format(parseISO(selectedEval.timestamp), 'yyyy-MM-dd HH:mm:ss')}
+                </Typography>
+              )}
+            </Box>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button
+                variant="outlined"
+                color="error"
+                size="small"
+                startIcon={<DeleteIcon />}
+                onClick={() => {
+                  if (selectedEval) {
+                    openDeleteConfirm(selectedEval.id, new MouseEvent('click') as any);
+                  }
+                }}
+              >
+                Delete
+              </Button>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={handleCloseDialog}
+              >
+                Close
+              </Button>
+            </Box>
+          </Box>
         </DialogTitle>
         <Box sx={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)', bgcolor: '#1E1E1E' }}>
           <Tabs 
             value={tabValue} 
-            onChange={handleTabChange} 
+            onChange={handleTabChange}
             aria-label="evaluation tabs"
-            sx={{
-              '& .MuiTabs-indicator': {
+            sx={{ 
+              '& .MuiTabs-indicator': { 
                 backgroundColor: '#FF6325'
               },
-              '& .MuiTab-root': { 
-                color: 'rgba(255, 255, 255, 0.7)',
-                '&.Mui-selected': {
-                  color: 'white',
-                },
+              '& .Mui-selected': {
+                color: '#FF6325 !important'
               },
+              '& .MuiTab-root': {
+                color: 'rgba(255, 255, 255, 0.7)'
+              }
             }}
           >
-            <Tab label="Summary" id="eval-tab-0" aria-controls="eval-tabpanel-0" />
+            <Tab label="Overview" id="eval-tab-0" aria-controls="eval-tabpanel-0" />
             <Tab label="Events" id="eval-tab-1" aria-controls="eval-tabpanel-1" />
             <Tab label="Raw Data" id="eval-tab-2" aria-controls="eval-tabpanel-2" />
           </Tabs>
@@ -1005,66 +1459,84 @@ const Evaluations: React.FC = () => {
               <TabPanel value={tabValue} index={0}>
                 <Box>
                   <Typography variant="h6" gutterBottom>
-                    Basic Information
+                    Evaluation Summary
                   </Typography>
-                  <Grid container spacing={2} sx={{ mb: 3 }}>
-                    <Grid sx={{ gridColumn: { xs: 'span 12', sm: 'span 6' } }}>
-                      <Typography variant="body1">
-                        <strong>ID:</strong> {selectedEval.id}
-                      </Typography>
+                  
+                  {/* Metadata section */}
+                  <Paper sx={{ p: 2, mb: 3, bgcolor: 'rgba(255, 255, 255, 0.03)' }}>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={6} md={3}>
+                        <Typography variant="body2" color="text.secondary">
+                          ID
+                        </Typography>
+                        <Typography variant="body1">
+                          {selectedEval.id}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={3}>
+                        <Typography variant="body2" color="text.secondary">
+                          Name
+                        </Typography>
+                        <Typography variant="body1">
+                          {selectedEval.name}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={3}>
+                        <Typography variant="body2" color="text.secondary">
+                          Timestamp
+                        </Typography>
+                        <Typography variant="body1">
+                          {format(parseISO(selectedEval.timestamp), 'MMM d, yyyy h:mm a')}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6} md={3}>
+                        <Typography variant="body2" color="text.secondary">
+                          Trial Count
+                        </Typography>
+                        <Typography variant="body1">
+                          {selectedEval.trial_count}
+                        </Typography>
+                      </Grid>
                     </Grid>
-                    <Grid sx={{ gridColumn: { xs: 'span 12', sm: 'span 6' } }}>
-                      <Typography variant="body1">
-                        <strong>Name:</strong> {selectedEval.name}
+                  </Paper>
+                  
+                  {/* Dynamic data sections from parseEvaluationData */}
+                  {dataSections.map(section => (
+                    <Box key={section.key} sx={{ mb: 4 }}>
+                      <Typography variant="h6" gutterBottom>
+                        {section.title}
                       </Typography>
-                    </Grid>
-                    <Grid sx={{ gridColumn: { xs: 'span 12', sm: 'span 6' } }}>
-                      <Typography variant="body1">
-                        <strong>Session ID:</strong> {selectedEval.session_id}
-                      </Typography>
-                    </Grid>
-                    <Grid sx={{ gridColumn: { xs: 'span 12', sm: 'span 6' } }}>
-                      <Typography variant="body1">
-                        <strong>Trial Count:</strong> {selectedEval.trial_count}
-                      </Typography>
-                    </Grid>
-                  </Grid>
-
-                  {/* Add Tool Usage Panel */}
-                  <ToolUsagePanel 
-                    toolSummary={selectedEval.tool_summary} 
-                    metadata={selectedEval.metadata} 
-                    evalData={selectedEval} 
-                  />
-
-                  {/* Display scoring function code if available */}
-                  {selectedEval.score_functions_code && Object.entries(selectedEval.score_functions_code).length > 0 && (
-                    <Box sx={{ mb: 3 }}>
-                      <Typography variant="h6" gutterBottom sx={{ color: 'white' }}>
-                        Scoring Functions
-                      </Typography>
-                      {Object.entries(selectedEval.score_functions_code).map(([key, code]) => (
+                      
+                      {/* For tool summary, show a special visualization */}
+                      {section.key === 'tool_summary' && selectedEval.tool_summary && (
+                        <ToolUsagePanel toolSummary={selectedEval.tool_summary} />
+                      )}
+                      
+                      {/* For eval_results, show in a table */}
+                      {section.key === 'eval_results' && selectedEval.eval_results && (
+                        <DataTable
+                          rows={selectedEval.eval_results.map((r, i) => ({ ...r, id: i }))}
+                          columns={resultColumns}
+                          getRowId={(row) => row.id}
+                          height={400}
+                        />
+                      )}
+                      
+                      {/* Score functions code gets syntax highlighting */}
+                      {section.key === 'score_functions_code' && selectedEval.score_functions_code && (
                         <CodeViewer 
-                          key={key} 
-                          code={code as string} 
-                          title={`Scoring Function: ${key.replace(/<|>/g, '')}`} 
-                          language="python"
+                          code={Object.entries(selectedEval.score_functions_code)
+                            .map(([name, code]) => `# ${name}\n${code}`)
+                            .join('\n\n')} 
+                          language="python" 
                         />
-                      ))}
+                      )}
+                      
+                      {/* Default view for other sections */}
+                      {!['tool_summary', 'eval_results', 'score_functions_code'].includes(section.key) && (
+                        <JsonViewer data={selectedEval?.[section.key]} title={section.title} />
+                      )}
                     </Box>
-                  )}
-
-                  {/* Dynamically render data sections based on the evaluation structure */}
-                  {dataSections.map((section: { key: string; title: string }) => (
-                    selectedEval[section.key] && (
-                      <Box key={section.key} sx={{ mb: 3 }}>
-                        <JsonViewer 
-                          data={selectedEval[section.key]} 
-                          title={section.title} 
-                          defaultExpanded 
-                        />
-                      </Box>
-                    )
                   ))}
                 </Box>
               </TabPanel>
@@ -1111,6 +1583,82 @@ const Evaluations: React.FC = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete confirmation dialog */}
+      <Dialog
+        open={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        maxWidth="xs"
+        PaperProps={{
+          sx: {
+            bgcolor: 'rgba(30, 30, 30, 0.85)',
+            backdropFilter: 'blur(16px)',
+            boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.5)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            borderRadius: '12px',
+            color: 'white',
+          }
+        }}
+        BackdropProps={{
+          sx: {
+            backgroundColor: 'rgba(0, 0, 0, 0.2)',
+            backdropFilter: 'blur(4px)',
+          }
+        }}
+      >
+        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete this evaluation? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setDeleteConfirmOpen(false)} 
+            disabled={deleteLoading}
+          >
+            Cancel
+          </Button>
+          <Button 
+            variant="contained" 
+            color="error" 
+            onClick={handleDeleteEval}
+            disabled={deleteLoading}
+          >
+            {deleteLoading ? 'Deleting...' : 'Delete'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={() => setSnackbarOpen(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        sx={{
+          '& .MuiPaper-root': {
+            backdropFilter: 'blur(10px)',
+            background: snackbarSeverity === 'success' 
+              ? 'rgba(56, 142, 60, 0.85)' 
+              : 'rgba(211, 47, 47, 0.85)',
+            boxShadow: '0 6px 20px rgba(0, 0, 0, 0.3)',
+            border: '1px solid',
+            borderColor: snackbarSeverity === 'success' 
+              ? 'rgba(129, 199, 132, 0.5)' 
+              : 'rgba(229, 115, 115, 0.5)',
+            borderRadius: '8px',
+          }
+        }}
+      >
+        <Alert 
+          onClose={() => setSnackbarOpen(false)} 
+          severity={snackbarSeverity}
+          variant="filled"
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

@@ -81,6 +81,12 @@ export const deleteTrace = async (id: string): Promise<{ success: boolean; messa
   return response.data;
 };
 
+// Delete a session and all related traces and evaluations
+export const deleteSession = async (sessionId: string): Promise<{ success: boolean; message?: string; error?: string }> => {
+  const response = await apiClient.delete<{ success: boolean; message?: string; error?: string }>(`/traces/sessions/${sessionId}`);
+  return response.data;
+};
+
 // Evaluation API endpoints
 export const getEvalResults = async (
   evalId?: string,
@@ -129,5 +135,11 @@ export const getEvalNames = async (): Promise<EvalNamesResponse> => {
 
 export const getEventTypes = async (): Promise<EventTypesResponse> => {
   const response = await apiClient.get<EventTypesResponse>('/evals/event-types');
+  return response.data;
+};
+
+// Delete an evaluation by ID
+export const deleteEval = async (evalId: string): Promise<{ success: boolean; message?: string; error?: string }> => {
+  const response = await apiClient.delete<{ success: boolean; message?: string; error?: string }>(`/evals/${evalId}`);
   return response.data;
 }; 

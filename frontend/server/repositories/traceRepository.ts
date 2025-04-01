@@ -172,4 +172,105 @@ export const deleteTrace = async (id: string): Promise<boolean> => {
     console.error('Error deleting trace:', error);
     throw error;
   }
+};
+
+/**
+ * Delete a session and all its related traces and evaluations
+ */
+export const deleteSession = async (sessionId: string): Promise<{ deletedTraces: number; deletedEvals: number; deletedEvents: number; sessionExists: boolean }> => {
+  const db = await getDb();
+  
+  try {
+    // Start a transaction to ensure data consistency
+    await db.run('BEGIN TRANSACTION');
+    
+    // First check if session exists
+    const sessionCheck = await db.get('SELECT session_id FROM traces WHERE session_id = ? LIMIT 1', sessionId);
+    
+    // If session doesn't exist, return success with zero counts rather than throwing an error
+    if (!sessionCheck) {
+      await db.run('COMMIT'); // Still need to end the transaction
+      return { 
+        deletedTraces: 0,
+        deletedEvals: 0,
+        deletedEvents: 0,
+        sessionExists: false
+      };
+    }
+    
+    // Delete all traces for this session
+    const traceResult = await db.run('DELETE FROM traces WHERE session_id = ?', sessionId);
+    const deletedTraces = traceResult.changes ?? 0;
+    
+    // Delete all evaluation events related to this session
+    let deletedEvalEvents = 0;
+    try {
+      // Check if table exists before attempting to delete
+      const tableCheck = await db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='eval_events'");
+      if (tableCheck) {
+        const evalEventsResult = await db.run('DELETE FROM eval_events WHERE session_id = ?', sessionId);
+        deletedEvalEvents = evalEventsResult.changes ?? 0;
+      }
+    } catch (err) {
+      console.warn('Could not delete eval_events:', err);
+      // Continue with the transaction, don't throw here
+    }
+    
+    // Get evaluation IDs related to this session before deleting them
+    let evalIds: string[] = [];
+    let deletedEvals = 0;
+    
+    try {
+      // Check if table exists before attempting to query/delete
+      const tableCheck = await db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='eval_results'");
+      
+      if (tableCheck) {
+        // Get all evaluation IDs for this session
+        const evalRows = await db.all('SELECT id FROM eval_results WHERE session_id = ?', sessionId);
+        evalIds = evalRows.map(row => row.id);
+        
+        // Delete the evaluation results
+        const evalResult = await db.run('DELETE FROM eval_results WHERE session_id = ?', sessionId);
+        deletedEvals = evalResult.changes ?? 0;
+        
+        // Delete related evaluation events for each eval ID
+        if (evalIds.length > 0) {
+          const tableCheck = await db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='eval_events'");
+          if (tableCheck) {
+            for (const evalId of evalIds) {
+              try {
+                await db.run('DELETE FROM eval_events WHERE eval_id = ?', evalId);
+              } catch (err) {
+                console.warn(`Could not delete eval_events for eval_id ${evalId}:`, err);
+                // Continue with the loop, don't throw
+              }
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Could not process eval_results:', err);
+      // Continue with the transaction, don't throw here
+    }
+    
+    // Commit the transaction
+    await db.run('COMMIT');
+    
+    return { 
+      deletedTraces,
+      deletedEvals,
+      deletedEvents: deletedEvalEvents,
+      sessionExists: true
+    };
+  } catch (error) {
+    // Rollback in case of any error
+    try {
+      await db.run('ROLLBACK');
+    } catch (rollbackError) {
+      console.error('Error during transaction rollback:', rollbackError);
+    }
+    
+    console.error('Error deleting session:', error);
+    throw error;
+  }
 }; 

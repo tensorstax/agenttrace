@@ -124,4 +124,41 @@ router.get('/event-types', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * DELETE /api/evals/:id
+ * Delete an evaluation and its related events
+ */
+router.delete('/:id', async (req: Request, res: Response) => {
+  try {
+    const evalId = req.params.id;
+    
+    if (!evalId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Evaluation ID is required'
+      });
+    }
+    
+    const deleted = await evalRepository.deleteEval(evalId);
+    
+    if (deleted) {
+      res.json({
+        success: true,
+        message: `Evaluation ${evalId} and its events have been deleted`
+      });
+    } else {
+      res.status(404).json({
+        success: false,
+        error: `Evaluation with ID ${evalId} not found`
+      });
+    }
+  } catch (error) {
+    console.error('Error deleting evaluation:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete evaluation'
+    });
+  }
+});
+
 export const evalRoutes = router; 
