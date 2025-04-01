@@ -191,4 +191,33 @@ export const getEventTypes = async (): Promise<string[]> => {
   const rows = await db.all(query);
   
   return rows.map((row: { event_type: string }) => row.event_type);
+};
+
+/**
+ * Delete an evaluation and its associated events
+ */
+export const deleteEval = async (evalId: string): Promise<boolean> => {
+  const db = await getDb();
+  
+  try {
+    // Use a transaction to ensure both operations complete or both fail
+    await db.run('BEGIN TRANSACTION');
+    
+    // Delete evaluation events related to this evaluation ID
+    await db.run('DELETE FROM eval_events WHERE eval_id = ?', evalId);
+    
+    // Delete the evaluation itself
+    const result = await db.run('DELETE FROM eval_results WHERE id = ?', evalId);
+    
+    // Commit the transaction
+    await db.run('COMMIT');
+    
+    // Return true if at least one row was affected (result.changes might be undefined, default to 0)
+    return (result.changes ?? 0) > 0;
+  } catch (error) {
+    // Rollback on error
+    await db.run('ROLLBACK');
+    console.error('Error deleting evaluation:', error);
+    throw error;
+  }
 }; 

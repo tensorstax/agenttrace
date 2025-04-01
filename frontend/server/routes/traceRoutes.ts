@@ -157,4 +157,59 @@ router.delete('/:id', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * DELETE /api/traces/sessions/:id
+ * Delete a session and all its related traces and evaluations
+ */
+router.delete('/sessions/:id', async (req: Request, res: Response) => {
+  try {
+    const sessionId = req.params.id;
+    
+    if (!sessionId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Session ID is required'
+      });
+    }
+    
+    try {
+      const result = await traceRepository.deleteSession(sessionId);
+      
+      // Handle case when session doesn't exist
+      if (!result.sessionExists) {
+        // Return 200 OK with a message that nothing was deleted (not found but not an error)
+        return res.json({
+          success: true,
+          message: `No session found with ID ${sessionId}, nothing was deleted`,
+          deletedTraces: 0,
+          deletedEvals: 0,
+          deletedEvents: 0
+        });
+      }
+      
+      // Normal success case
+      res.json({
+        success: true,
+        message: `Session ${sessionId} deleted successfully`,
+        deletedTraces: result.deletedTraces,
+        deletedEvals: result.deletedEvals,
+        deletedEvents: result.deletedEvents
+      });
+    } catch (error: any) {
+      // Re-throw for the outer catch block to handle
+      throw error;
+    }
+  } catch (error: any) {
+    console.error('Error deleting session:', error);
+    
+    // Send a more detailed error message to the client
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete session',
+      message: error.message || 'An unexpected error occurred',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
 export const traceRoutes = router; 
