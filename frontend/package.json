@@ -1,0 +1,21 @@
+{
+  "name": "tensorscope-frontend",
+  "version": "0.1.0",
+  "description": "Web interface for Tensorscope visualization",
+  "scripts": {
+    "install:all": "npm install && npm run install:server && npm run install:client",
+    "install:server": "cd server && npm install",
+    "install:client": "cd client && npm install",
+    "start": "concurrently \"npm run start:server\" \"npm run start:client\"",
+    "start:server": "cd server && npm run start",
+    "start:client": "cd client && npm run dev",
+    "build": "cd client && npm run build",
+    "dev": "npm run start",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "author": "TensorStax",
+  "license": "MIT"
+} 

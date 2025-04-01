@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tensorscope"
+version = "0.1.0"
+description = "A tool for evaluating and tracing tensor operations"
+readme = "README.md"
+authors = [
+    {name = "TensorStax", email = "info@tensorstax.com"}
+]
+license = {file = "LICENSE"}
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+]
+requires-python = ">=3.7"
+dependencies = [
+    "numpy",
+]
+
+[project.urls]
+Homepage = "https://github.com/tensorstax/tensorscope"
+Issues = "https://github.com/tensorstax/tensorscope/issues"
+
+[project.scripts]
+tensorscope = "tensorscope.cli:main" 
