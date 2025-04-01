@@ -97,7 +97,7 @@ const Layout: React.FC = () => {
               color: 'white'
             }}
           >
-            agenttrace
+            AgentTrace
           </Typography>
         </Box>
         <Typography 
@@ -222,7 +222,7 @@ const Layout: React.FC = () => {
               letterSpacing: '-0.01em'
             }}
           >
-            agenttrace
+            AgentTrace
           </Typography>
           <Box sx={{ flexGrow: 1 }} />
           <Avatar
