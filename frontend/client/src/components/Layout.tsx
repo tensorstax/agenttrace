@@ -58,7 +58,7 @@ const Layout: React.FC = () => {
 
   // Update document title
   useEffect(() => {
-    document.title = 'agenttrace by TensorStax';
+    document.title = 'AgentTrace by TensorStax';
   }, []);
 
   const handleDrawerToggle = () => {
