@@ -1,7 +1,7 @@
 {
-  "name": "tensorscope-server",
+  "name": "agenttrace-server",
   "version": "0.1.0",
-  "description": "Backend API for Tensorscope visualization",
+  "description": "Backend API for agenttrace visualization",
   "main": "index.js",
   "scripts": {
     "start": "ts-node index.ts",

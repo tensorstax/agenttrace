@@ -1,5 +1,22 @@
 import { getDb } from '../services/dbService';
 
+/**
+ * Check if a table exists in the database
+ */
+export const tableExists = async (tableName: string): Promise<boolean> => {
+  const db = await getDb();
+  try {
+    const result = await db.get(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+      tableName
+    );
+    return !!result;
+  } catch (error) {
+    console.error(`Error checking if table ${tableName} exists:`, error);
+    return false;
+  }
+};
+
 export interface EvalResult {
   id: string;
   name: string;
@@ -47,54 +64,66 @@ export const getEvalResults = async (
   sessionId?: string, 
   limit: number = 10
 ): Promise<EvalResponse[]> => {
-  const db = await getDb();
-  
-  let query = "SELECT id, name, timestamp, trial_count, session_id, data FROM eval_results";
-  const conditions: string[] = [];
-  const params: any[] = [];
-  
-  if (evalId) {
-    conditions.push("id = ?");
-    params.push(evalId);
-  }
-  
-  if (name) {
-    conditions.push("name = ?");
-    params.push(name);
-  }
-  
-  if (sessionId) {
-    conditions.push("session_id = ?");
-    params.push(sessionId);
-  }
-  
-  if (conditions.length > 0) {
-    query += " WHERE " + conditions.join(" AND ");
-  }
-  
-  query += " ORDER BY timestamp DESC LIMIT ?";
-  params.push(limit);
-  
-  const rows = await db.all(query, ...params);
-  
-  return rows.map((row: EvalResult) => {
-    // Parse the JSON data back into a Python dictionary
-    const data = JSON.parse(row.data || '{}');
+  try {
+    const db = await getDb();
     
-    // Create a result entry with metadata
-    const result: EvalResponse = {
-      id: row.id,
-      name: row.name,
-      timestamp: row.timestamp,
-      trial_count: row.trial_count,
-      session_id: row.session_id
-    };
+    // Check if table exists first
+    const tableExistsResult = await tableExists('eval_results');
+    if (!tableExistsResult) {
+      console.log('eval_results table does not exist yet');
+      return [];
+    }
     
-    // Add all the data fields
-    Object.assign(result, data);
+    let query = "SELECT id, name, timestamp, trial_count, session_id, data FROM eval_results";
+    const conditions: string[] = [];
+    const params: any[] = [];
     
-    return result;
-  });
+    if (evalId) {
+      conditions.push("id = ?");
+      params.push(evalId);
+    }
+    
+    if (name) {
+      conditions.push("name = ?");
+      params.push(name);
+    }
+    
+    if (sessionId) {
+      conditions.push("session_id = ?");
+      params.push(sessionId);
+    }
+    
+    if (conditions.length > 0) {
+      query += " WHERE " + conditions.join(" AND ");
+    }
+    
+    query += " ORDER BY timestamp DESC LIMIT ?";
+    params.push(limit);
+    
+    const rows = await db.all(query, ...params);
+    
+    return rows.map((row: EvalResult) => {
+      // Parse the JSON data back into a Python dictionary
+      const data = JSON.parse(row.data || '{}');
+      
+      // Create a result entry with metadata
+      const result: EvalResponse = {
+        id: row.id,
+        name: row.name,
+        timestamp: row.timestamp,
+        trial_count: row.trial_count,
+        session_id: row.session_id
+      };
+      
+      // Add all the data fields
+      Object.assign(result, data);
+      
+      return result;
+    });
+  } catch (error) {
+    console.error('Error in getEvalResults:', error);
+    return [];
+  }
 };
 
 /**
@@ -106,91 +135,139 @@ export const getEvalEvents = async (
   eventType?: string, 
   limit: number = 100
 ): Promise<EvalEventResponse[]> => {
-  const db = await getDb();
-  
-  let query = "SELECT id, eval_id, session_id, timestamp, event_type, name, data FROM eval_events";
-  const conditions: string[] = [];
-  const params: any[] = [];
-  
-  if (evalId) {
-    conditions.push("eval_id = ?");
-    params.push(evalId);
-  }
-  
-  if (sessionId) {
-    conditions.push("session_id = ?");
-    params.push(sessionId);
-  }
-  
-  if (eventType) {
-    conditions.push("event_type = ?");
-    params.push(eventType);
-  }
-  
-  if (conditions.length > 0) {
-    query += " WHERE " + conditions.join(" AND ");
-  }
-  
-  query += " ORDER BY timestamp DESC LIMIT ?";
-  params.push(limit);
-  
-  const rows = await db.all(query, ...params);
-  
-  return rows.map((row: EvalEvent) => {
-    // Parse the JSON data back into a Python dictionary
-    const data = JSON.parse(row.data || '{}');
+  try {
+    const db = await getDb();
     
-    // Create an event entry with metadata
-    const event: EvalEventResponse = {
-      id: row.id,
-      eval_id: row.eval_id,
-      session_id: row.session_id,
-      timestamp: row.timestamp,
-      event_type: row.event_type,
-      name: row.name
-    };
+    // Check if table exists first
+    const tableExistsResult = await tableExists('eval_events');
+    if (!tableExistsResult) {
+      console.log('eval_events table does not exist yet');
+      return [];
+    }
     
-    // Add all the data fields
-    Object.assign(event, data);
+    let query = "SELECT id, eval_id, session_id, timestamp, event_type, name, data FROM eval_events";
+    const conditions: string[] = [];
+    const params: any[] = [];
     
-    return event;
-  });
+    if (evalId) {
+      conditions.push("eval_id = ?");
+      params.push(evalId);
+    }
+    
+    if (sessionId) {
+      conditions.push("session_id = ?");
+      params.push(sessionId);
+    }
+    
+    if (eventType) {
+      conditions.push("event_type = ?");
+      params.push(eventType);
+    }
+    
+    if (conditions.length > 0) {
+      query += " WHERE " + conditions.join(" AND ");
+    }
+    
+    query += " ORDER BY timestamp DESC LIMIT ?";
+    params.push(limit);
+    
+    const rows = await db.all(query, ...params);
+    
+    return rows.map((row: EvalEvent) => {
+      // Parse the JSON data back into a Python dictionary
+      const data = JSON.parse(row.data || '{}');
+      
+      // Create an event entry with metadata
+      const event: EvalEventResponse = {
+        id: row.id,
+        eval_id: row.eval_id,
+        session_id: row.session_id,
+        timestamp: row.timestamp,
+        event_type: row.event_type,
+        name: row.name
+      };
+      
+      // Add all the data fields
+      Object.assign(event, data);
+      
+      return event;
+    });
+  } catch (error) {
+    console.error('Error in getEvalEvents:', error);
+    return [];
+  }
 };
 
 /**
  * Get unique evaluation IDs
  */
 export const getEvalIds = async (limit: number = 100): Promise<string[]> => {
-  const db = await getDb();
-  
-  const query = "SELECT DISTINCT id FROM eval_results ORDER BY timestamp DESC LIMIT ?";
-  const rows = await db.all(query, limit);
-  
-  return rows.map((row: { id: string }) => row.id);
+  try {
+    const db = await getDb();
+    
+    // Check if table exists first
+    const tableExistsResult = await tableExists('eval_results');
+    if (!tableExistsResult) {
+      console.log('eval_results table does not exist yet');
+      return [];
+    }
+    
+    const query = "SELECT DISTINCT id FROM eval_results ORDER BY timestamp DESC LIMIT ?";
+    const rows = await db.all(query, limit);
+    
+    return rows.map((row: { id: string }) => row.id);
+  } catch (error) {
+    console.error('Error in getEvalIds:', error);
+    return [];
+  }
 };
 
 /**
  * Get unique evaluation names
  */
 export const getEvalNames = async (): Promise<string[]> => {
-  const db = await getDb();
-  
-  const query = "SELECT DISTINCT name FROM eval_results";
-  const rows = await db.all(query);
-  
-  return rows.map((row: { name: string }) => row.name);
+  try {
+    const db = await getDb();
+    
+    // Check if table exists first
+    const tableExistsResult = await tableExists('eval_results');
+    if (!tableExistsResult) {
+      console.log('eval_results table does not exist yet');
+      return [];
+    }
+    
+    const query = "SELECT DISTINCT name FROM eval_results";
+    const rows = await db.all(query);
+    
+    return rows.map((row: { name: string }) => row.name);
+  } catch (error) {
+    console.error('Error in getEvalNames:', error);
+    return [];
+  }
 };
 
 /**
  * Get distinct event types
  */
 export const getEventTypes = async (): Promise<string[]> => {
-  const db = await getDb();
-  
-  const query = "SELECT DISTINCT event_type FROM eval_events";
-  const rows = await db.all(query);
-  
-  return rows.map((row: { event_type: string }) => row.event_type);
+  try {
+    const db = await getDb();
+    
+    // Check if table exists first
+    const tableExistsResult = await tableExists('eval_events');
+    if (!tableExistsResult) {
+      console.log('eval_events table does not exist yet');
+      return [];
+    }
+    
+    const query = "SELECT DISTINCT event_type FROM eval_events";
+    const rows = await db.all(query);
+    
+    return rows.map((row: { event_type: string }) => row.event_type);
+  } catch (error) {
+    console.error('Error in getEventTypes:', error);
+    return [];
+  }
 };
 
 /**

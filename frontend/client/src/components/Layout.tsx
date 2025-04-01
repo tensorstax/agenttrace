@@ -58,7 +58,7 @@ const Layout: React.FC = () => {
 
   // Update document title
   useEffect(() => {
-    document.title = 'TensorScope by TensorStax';
+    document.title = 'agenttrace by TensorStax';
   }, []);
 
   const handleDrawerToggle = () => {
@@ -97,7 +97,7 @@ const Layout: React.FC = () => {
               color: 'white'
             }}
           >
-            TensorScope
+            agenttrace
           </Typography>
         </Box>
         <Typography 
@@ -222,7 +222,7 @@ const Layout: React.FC = () => {
               letterSpacing: '-0.01em'
             }}
           >
-            TensorScope
+            agenttrace
           </Typography>
           <Box sx={{ flexGrow: 1 }} />
           <Avatar

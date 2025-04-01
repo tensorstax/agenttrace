@@ -1,7 +1,7 @@
 {
-  "name": "tensorscope-frontend",
+  "name": "agenttrace-frontend",
   "version": "0.1.0",
-  "description": "Web interface for Tensorscope visualization",
+  "description": "Web interface for agenttrace visualization",
   "scripts": {
     "install:all": "npm install && npm run install:server && npm run install:client",
     "install:server": "cd server && npm install",

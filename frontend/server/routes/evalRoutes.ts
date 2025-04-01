@@ -23,10 +23,22 @@ router.get('/results', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Error retrieving evaluation results:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to retrieve evaluation results'
-    });
+    
+    // Check if the error is related to missing table
+    const errorStr = String(error);
+    if (errorStr.includes('no such table') || errorStr.includes('SQLITE_ERROR')) {
+      // Return empty results instead of an error
+      res.json({
+        success: true,
+        count: 0,
+        results: []
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to retrieve evaluation results'
+      });
+    }
   }
 });
 
@@ -50,10 +62,22 @@ router.get('/events', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Error retrieving evaluation events:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to retrieve evaluation events'
-    });
+    
+    // Check if the error is related to missing table
+    const errorStr = String(error);
+    if (errorStr.includes('no such table') || errorStr.includes('SQLITE_ERROR')) {
+      // Return empty results instead of an error
+      res.json({
+        success: true,
+        count: 0,
+        events: []
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to retrieve evaluation events'
+      });
+    }
   }
 });
 
@@ -73,10 +97,22 @@ router.get('/ids', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Error retrieving evaluation IDs:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to retrieve evaluation IDs'
-    });
+    
+    // Check if the error is related to missing table
+    const errorStr = String(error);
+    if (errorStr.includes('no such table') || errorStr.includes('SQLITE_ERROR')) {
+      // Return empty results instead of an error
+      res.json({
+        success: true,
+        count: 0,
+        eval_ids: []
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to retrieve evaluation IDs'
+      });
+    }
   }
 });
 
@@ -95,10 +131,22 @@ router.get('/names', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Error retrieving evaluation names:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to retrieve evaluation names'
-    });
+    
+    // Check if the error is related to missing table
+    const errorStr = String(error);
+    if (errorStr.includes('no such table') || errorStr.includes('SQLITE_ERROR')) {
+      // Return empty results instead of an error
+      res.json({
+        success: true,
+        count: 0,
+        names: []
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to retrieve evaluation names'
+      });
+    }
   }
 });
 
@@ -117,10 +165,22 @@ router.get('/event-types', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Error retrieving event types:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to retrieve event types'
-    });
+    
+    // Check if the error is related to missing table
+    const errorStr = String(error);
+    if (errorStr.includes('no such table') || errorStr.includes('SQLITE_ERROR')) {
+      // Return empty results instead of an error
+      res.json({
+        success: true,
+        count: 0,
+        event_types: []
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to retrieve event types'
+      });
+    }
   }
 });
 

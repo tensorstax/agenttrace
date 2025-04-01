@@ -35,16 +35,34 @@ const OverviewChart: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<OverviewDataPoint[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [hasEvals, setHasEvals] = useState(false);
 
   useEffect(() => {
     const fetchOverviewData = async () => {
+      let tracesResponse: TraceResponse | null = null;
+      
       try {
         setLoading(true);
         setError(null);
+        setHasEvals(false);
 
         // Fetch the last 30 days of data
-        const tracesResponse = await getTraces(1000);
-        const evaluationsResponse = await getEvalResults(undefined, undefined, undefined, 1000);
+        tracesResponse = await getTraces(1000);
+        
+        // Initialize evaluationsResponse with empty results in case fetching fails
+        let evaluationsResponse: EvalResultsResponse = { results: [], count: 0, success: true };
+        
+        try {
+          // Try to fetch evaluations, but don't fail if this doesn't work
+          evaluationsResponse = await getEvalResults(undefined, undefined, undefined, 1000);
+          // If we got results, set the hasEvals flag to true
+          setHasEvals(evaluationsResponse.results && evaluationsResponse.results.length > 0);
+        } catch (evalErr) {
+          // Log the error but continue with empty evaluations
+          console.error('Error fetching evaluation data:', evalErr);
+          // Don't set the error state here, we'll continue with empty evaluations
+        }
+        
         const sessionsResponse = await getSessions(1000);
 
         // Prepare data structure to hold aggregated data by date
@@ -114,7 +132,62 @@ const OverviewChart: React.FC = () => {
         setData(chartData);
       } catch (err) {
         console.error('Error fetching overview data:', err);
-        setError('Failed to load overview data. Please try again later.');
+        
+        // Only show error if we couldn't get any trace data at all and it's not related to missing evals
+        if ((!tracesResponse || !tracesResponse.traces) && 
+            !(err instanceof Error && 
+              (err.message.includes('no such table') || 
+               err.message.includes('SQLITE_ERROR') ||
+               err.message.includes('TABLE_NOT_FOUND')))) {
+          setError('Failed to load overview data. Please try again later.');
+        } else {
+          // If we have trace data, we can still show a partial chart with evals as 0
+          console.warn('Partial data loaded for overview chart, continuing with available data');
+          
+          // Check if this is the specific error for missing evals table
+          if (err instanceof Error && 
+              (err.message.includes('no such table') || 
+               err.message.includes('SQLITE_ERROR') ||
+               err.message.includes('TABLE_NOT_FOUND'))) {
+            // Log informational message but don't show an error - we'll still show the chart
+            console.info('Evaluations table does not exist yet - showing chart with evals as 0');
+          }
+          
+          // Create minimal chart data with just traces if we have them
+          const minimalData: OverviewDataPoint[] = [];
+          for (let i = 0; i < 30; i++) {
+            const date = subDays(new Date(), i);
+            const dateKey = format(date, 'yyyy-MM-dd');
+            minimalData.push({
+              date: dateKey,
+              traces: 0, // Will be updated below if we have trace data
+              evaluations: 0,
+              sessions: 0,
+              display: format(date, 'MMM dd')
+            });
+          }
+          
+          // Add any trace data we have
+          if (tracesResponse && tracesResponse.traces) {
+            const thirtyDaysAgo = subDays(new Date(), 30);
+            
+            tracesResponse.traces.forEach((trace: Trace) => {
+              if (trace.timestamp) {
+                const date = parseISO(trace.timestamp);
+                if (date >= thirtyDaysAgo) {
+                  const dateKey = format(date, 'yyyy-MM-dd');
+                  const dataPoint = minimalData.find(dp => dp.date === dateKey);
+                  if (dataPoint) {
+                    dataPoint.traces += 1;
+                  }
+                }
+              }
+            });
+          }
+          
+          // Set the minimal data we were able to construct
+          setData(minimalData);
+        }
       } finally {
         setLoading(false);
       }
@@ -205,6 +278,11 @@ const OverviewChart: React.FC = () => {
         }}
       >
         Traces and evaluations over the last 30 days
+        {!hasEvals && (
+          <Box component="span" sx={{ display: 'inline-block', ml: 1, color: 'info.main', fontSize: '0.8rem' }}>
+            (No evaluations available yet. Run an eval to create data.)
+          </Box>
+        )}
       </Typography>
 
       <Box sx={{ height: 400, position: 'relative' }}>
@@ -234,9 +312,12 @@ const OverviewChart: React.FC = () => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              flexDirection: 'column',
+              padding: 3,
+              textAlign: 'center'
             }}
           >
-            <Typography color="error">{error}</Typography>
+            <Typography color="error" gutterBottom>{error}</Typography>
           </Box>
         ) : (
           <ResponsiveContainer width="100%" height="100%">

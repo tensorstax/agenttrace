@@ -47,21 +47,61 @@ const Dashboard: React.FC = () => {
   const [dbPath, setDbPath] = useState('');
   const [isPathUpdating, setIsPathUpdating] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
-  const [alertSeverity, setAlertSeverity] = useState<'success' | 'error'>('success');
+  const [alertSeverity, setAlertSeverity] = useState<'success' | 'error' | 'info' | 'warning'>('success');
   const [showAlert, setShowAlert] = useState(false);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        const [sessionsResponse, functionsResponse, tagsResponse, evalNamesResponse, dbPathResponse] =
-          await Promise.all([
-            getSessions(),
-            getTracedFunctions(),
-            getTags(),
-            getEvalNames(),
-            getDbPath(),
-          ]);
+        
+        // Fetch each type of data separately to isolate errors
+        let sessionsResponse, functionsResponse, tagsResponse, evalNamesResponse, dbPathResponse;
+        
+        try {
+          sessionsResponse = await getSessions();
+        } catch (error) {
+          console.error('Error fetching sessions:', error);
+          sessionsResponse = { sessions: [], count: 0 };
+        }
+        
+        try {
+          functionsResponse = await getTracedFunctions();
+        } catch (error) {
+          console.error('Error fetching functions:', error);
+          functionsResponse = { functions: [], count: 0 };
+        }
+        
+        try {
+          tagsResponse = await getTags();
+        } catch (error) {
+          console.error('Error fetching tags:', error);
+          tagsResponse = { tags: [], count: 0 };
+        }
+        
+        try {
+          evalNamesResponse = await getEvalNames();
+        } catch (error) {
+          console.error('Error fetching evaluation names:', error);
+          evalNamesResponse = { names: [], count: 0 };
+          
+          // Remove the error notification for missing eval_results table
+          // We'll just silently handle this as a normal case
+          // if (error instanceof Error && error.message && 
+          //     (error.message.includes('no such table') || 
+          //      error.message.includes('SQLITE_ERROR'))) {
+          //   setAlertMessage('Evaluations table doesn\'t exist yet. Run an eval to create the table.');
+          //   setAlertSeverity('info');
+          //   setShowAlert(true);
+          // }
+        }
+        
+        try {
+          dbPathResponse = await getDbPath();
+        } catch (error) {
+          console.error('Error fetching DB path:', error);
+          dbPathResponse = { path: '', success: false };
+        }
 
         setStats({
           sessions: sessionsResponse.count,
@@ -70,7 +110,9 @@ const Dashboard: React.FC = () => {
           evalNames: evalNamesResponse.count,
         });
         
-        setDbPath(dbPathResponse.path);
+        if (dbPathResponse.path) {
+          setDbPath(dbPathResponse.path);
+        }
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
         setAlertMessage('Error loading dashboard data');
@@ -113,14 +155,60 @@ const Dashboard: React.FC = () => {
     setLoading(true);
     const fetchDashboardData = async () => {
       try {
-        const [sessionsResponse, functionsResponse, tagsResponse, evalNamesResponse, dbPathResponse] =
-          await Promise.all([
-            getSessions(),
-            getTracedFunctions(),
-            getTags(),
-            getEvalNames(),
-            getDbPath(),
-          ]);
+        // Fetch each type of data separately to isolate errors
+        let sessionsResponse, functionsResponse, tagsResponse, evalNamesResponse, dbPathResponse;
+        let hasError = false;
+        
+        try {
+          sessionsResponse = await getSessions();
+        } catch (error) {
+          console.error('Error fetching sessions:', error);
+          sessionsResponse = { sessions: [], count: 0 };
+          hasError = true;
+        }
+        
+        try {
+          functionsResponse = await getTracedFunctions();
+        } catch (error) {
+          console.error('Error fetching functions:', error);
+          functionsResponse = { functions: [], count: 0 };
+          hasError = true;
+        }
+        
+        try {
+          tagsResponse = await getTags();
+        } catch (error) {
+          console.error('Error fetching tags:', error);
+          tagsResponse = { tags: [], count: 0 };
+          hasError = true;
+        }
+        
+        try {
+          evalNamesResponse = await getEvalNames();
+        } catch (error) {
+          console.error('Error fetching evaluation names:', error);
+          evalNamesResponse = { names: [], count: 0 };
+          hasError = false; // Don't count missing eval_results table as an error
+          
+          // Remove the error notification for missing eval_results table
+          // We'll just silently handle this as a normal case
+          // if (error instanceof Error && error.message && 
+          //     (error.message.includes('no such table') || 
+          //      error.message.includes('SQLITE_ERROR'))) {
+          //   setAlertMessage('Evaluations table doesn\'t exist yet. Run an eval to create the table.');
+          //   setAlertSeverity('info');
+          //   setShowAlert(true);
+          //   hasError = false;
+          // }
+        }
+        
+        try {
+          dbPathResponse = await getDbPath();
+        } catch (error) {
+          console.error('Error fetching DB path:', error);
+          dbPathResponse = { path: '', success: false };
+          hasError = true;
+        }
 
         setStats({
           sessions: sessionsResponse.count,
@@ -129,9 +217,17 @@ const Dashboard: React.FC = () => {
           evalNames: evalNamesResponse.count,
         });
         
-        setDbPath(dbPathResponse.path);
-        setAlertMessage('Data refreshed successfully');
-        setAlertSeverity('success');
+        if (dbPathResponse.path) {
+          setDbPath(dbPathResponse.path);
+        }
+        
+        if (hasError) {
+          setAlertMessage('Some data could not be refreshed');
+          setAlertSeverity('error');
+        } else {
+          setAlertMessage('Data refreshed successfully');
+          setAlertSeverity('success');
+        }
         setShowAlert(true);
       } catch (error) {
         console.error('Error refreshing dashboard data:', error);
