@@ -264,43 +264,43 @@ const Sessions: React.FC = () => {
         
         <Grid container spacing={2} alignItems="center">
           <Grid item xs={12} sm={6} md={3} lg={2.4}>
-            <TextField
-              fullWidth
+        <TextField
+          fullWidth
               placeholder="Search by ID, function, or tag..."
-              value={searchTerm}
-              onChange={handleSearchChange}
-              size="small"
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon sx={{ color: 'rgba(255, 255, 255, 0.5)' }} />
-                  </InputAdornment>
-                ),
-                sx: { color: 'white' }
-              }}
-              variant="outlined"
-              sx={{ 
-                '& .MuiOutlinedInput-root': {
-                  color: 'white',
-                  '& fieldset': {
-                    borderColor: 'rgba(255, 255, 255, 0.15)',
-                  },
-                  '&:hover fieldset': {
-                    borderColor: 'rgba(255, 255, 255, 0.25)',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: 'primary.main',
-                  },
-                },
-                '& .MuiInputLabel-root': {
-                  color: 'rgba(255, 255, 255, 0.7)',
-                },
-                '& input::placeholder': {
-                  color: 'rgba(255, 255, 255, 0.5)',
-                  opacity: 1,
-                },
-              }}
-            />
+          value={searchTerm}
+          onChange={handleSearchChange}
+          size="small"
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon sx={{ color: 'rgba(255, 255, 255, 0.5)' }} />
+              </InputAdornment>
+            ),
+            sx: { color: 'white' }
+          }}
+          variant="outlined"
+          sx={{ 
+            '& .MuiOutlinedInput-root': {
+              color: 'white',
+              '& fieldset': {
+                borderColor: 'rgba(255, 255, 255, 0.15)',
+              },
+              '&:hover fieldset': {
+                borderColor: 'rgba(255, 255, 255, 0.25)',
+              },
+              '&.Mui-focused fieldset': {
+                borderColor: 'primary.main',
+              },
+            },
+            '& .MuiInputLabel-root': {
+              color: 'rgba(255, 255, 255, 0.7)',
+            },
+            '& input::placeholder': {
+              color: 'rgba(255, 255, 255, 0.5)',
+              opacity: 1,
+            },
+          }}
+        />
           </Grid>
           
           <Grid item xs={12} sm={6} md={3} lg={2.4}>
@@ -411,7 +411,7 @@ const Sessions: React.FC = () => {
               onClick={handleResetFilters}
               fullWidth
               size="small"
-              sx={{ 
+                      sx={{ 
                 height: '40px',
                 borderColor: 'rgba(255, 255, 255, 0.23)',
                 color: 'white',
@@ -477,15 +477,15 @@ const Sessions: React.FC = () => {
               type: 'number',
               renderCell: (params) => {
                 return (
-                  <Chip 
+                    <Chip 
                     label={params.value}
-                    size="small"
-                    sx={{ 
+                      size="small"
+                      sx={{ 
                       height: 22, 
                       minWidth: 32,
-                      fontWeight: 500,
+                        fontWeight: 500,
                       fontSize: '0.75rem',
-                      bgcolor: 'rgba(255,255,255,0.05)',
+                        bgcolor: 'rgba(255,255,255,0.05)',
                       color: 'rgba(255, 255, 255, 0.9)',
                       borderRadius: '11px'
                     }}
@@ -541,32 +541,32 @@ const Sessions: React.FC = () => {
                 return (
                   <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
                     {functions.slice(0, 2).map((func) => (
-                      <Chip
-                        key={func}
-                        label={func}
-                        size="small"
-                        sx={{ 
+                          <Chip 
+                            key={func} 
+                            label={func} 
+                            size="small"
+                            sx={{ 
                           height: 20, 
                           fontSize: '0.65rem',
                           bgcolor: 'rgba(25,118,210,0.1)',
                           color: '#42a5f5',
                           '& .MuiChip-label': { px: 1 }
-                        }}
-                      />
-                    ))}
+                            }}
+                          />
+                        ))}
                     {functions.length > 2 && (
-                      <Chip
+                        <Chip 
                         label={`+${functions.length - 2}`}
-                        size="small"
-                        sx={{ 
+                          size="small"
+                          sx={{ 
                           height: 20, 
                           fontSize: '0.65rem',
                           bgcolor: 'rgba(255,255,255,0.05)',
                           color: 'rgba(255, 255, 255, 0.7)',
                           '& .MuiChip-label': { px: 1 }
-                        }}
-                      />
-                    )}
+                          }}
+                        />
+                      )}
                   </Box>
                 );
               }
@@ -578,15 +578,15 @@ const Sessions: React.FC = () => {
               renderCell: (params) => {
                 const tags = params.value as string[] || [];
                 if (tags.length === 0) return "—";
-                
-                return (
+                          
+                          return (
                   <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
                     {tags.slice(0, 2).map((tag) => (
-                      <Chip
-                        key={tag}
-                        label={tag}
-                        size="small"
-                        sx={{ 
+                            <Chip 
+                              key={tag} 
+                              label={tag} 
+                              size="small"
+                              sx={{
                           height: 20, 
                           fontSize: '0.65rem',
                           bgcolor: 'rgba(156,39,176,0.1)',
@@ -596,18 +596,18 @@ const Sessions: React.FC = () => {
                       />
                     ))}
                     {tags.length > 2 && (
-                      <Chip
+                        <Chip 
                         label={`+${tags.length - 2}`}
-                        size="small"
-                        sx={{ 
+                          size="small" 
+                          sx={{
                           height: 20, 
                           fontSize: '0.65rem',
                           bgcolor: 'rgba(255,255,255,0.05)',
                           color: 'rgba(255, 255, 255, 0.7)',
                           '& .MuiChip-label': { px: 1 }
-                        }}
-                      />
-                    )}
+                          }}
+                        />
+                      )}
                   </Box>
                 );
               }
@@ -620,24 +620,24 @@ const Sessions: React.FC = () => {
               renderCell: (params) => {
                 return (
                   <Box sx={{ display: 'flex', gap: 0.5 }}>
-                    <Button
+                  <Button
                       variant="outlined"
-                      size="small"
-                      component={Link}
+                    size="small"
+                    component={Link}
                       to={`/traces?session_id=${params.row.id}`}
-                      sx={{
+                    sx={{ 
                         py: 0.3,
                         fontSize: '0.75rem',
                         borderColor: 'rgba(255, 255, 255, 0.23)',
                         color: 'white',
-                        '&:hover': {
+                      '&:hover': {
                           borderColor: '#FF6325',
                           backgroundColor: 'rgba(255, 99, 37, 0.08)'
-                        }
-                      }}
-                    >
-                      View Traces
-                    </Button>
+                      }
+                    }}
+                  >
+                    View Traces
+                  </Button>
                     <IconButton 
                       aria-label="delete" 
                       size="small"
@@ -734,8 +734,8 @@ const Sessions: React.FC = () => {
                   }
                 }}
               />
-            </Box>
-          )}
+          </Box>
+        )}
         </DialogContent>
         <DialogActions>
           <Button 

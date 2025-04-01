@@ -42,13 +42,15 @@ License-File: LICENSE
 Requires-Dist: numpy
 Dynamic: license-file
 
-# Tensorscope
+# TensorScope
 
-Tensorscope is a Python library for evaluating and tracing tensor operations, making it easier to monitor and debug machine learning models.
+![TensorScope](https://i.imgur.com/DFtbGu0.png)
+
+TensorScope is a lightweight and hackable tracing/evaluation framework for AI agents and language models. It provides local monitoring and debugging capabilities, making it easier to build reliable and performant AI systems.
 
 ## Installation
 
-You can install Tensorscope directly from PyPI:
+You can install TensorScope directly from PyPI:
 
 ```bash
 pip install tensorscope
@@ -142,42 +144,44 @@ print(response)
 
 ```python
 from tensorscope import TracerEval
-import numpy as np
 import asyncio
+from openai import AsyncOpenAI
 
-# Define a simple task function that we want to evaluate
-def vector_norm(vector):
-    return np.linalg.norm(vector)
+client = AsyncOpenAI()
 
-# Create test data
-def get_test_vectors():
-    return [
-        {"input": np.array([3, 4])},
-        {"input": np.array([5, 12])},
-        {"input": np.array([1, 1, 1, 1])}
-    ]
+async def get_capital(input_message: str):
+    response = await client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": input_message}
+        ]
+    )
+    return response.choices[0].message.content
 
-# Define scoring functions
-def check_accuracy(output):
-    # This is just a dummy scoring function
-    return {"is_positive": output > 0}
+def capital_checker(output):
+    return {"score": 1.0 if "paris" in output.lower() else 0.0}
 
-# Create and run the evaluation
-evaluator = TracerEval(
-    name="vector_norm_evaluation",
-    data=get_test_vectors,
-    task=vector_norm,
-    scores=[check_accuracy]
-)
+capital_checker.name = "capital_checker"
 
-# Run the evaluation asynchronously
-results = asyncio.run(evaluator.run())
-print(results)
+async def main():
+    evaluator = TracerEval(
+        name="france_capital_test",
+        data=lambda: [{"input": "What is the capital of France?"}],
+        task=get_capital,
+        scores=[capital_checker]
+    )
+    
+    results = await evaluator.run()
+    print(f"Accuracy: {results['eval_results'][0]['scores']['capital_checker']['score']}")
+
+if __name__ == "__main__":
+    asyncio.run(main())
 ```
 
 ## Web Interface
 
-Tensorscope includes a web-based interface for visualizing traces and evaluation results.
+TensorScope includes a web-based interface for visualizing traces and evaluation results.
 
 ### Starting the Web Interface
 
