@@ -20,10 +20,19 @@ cd agenttrace
 pip install -e .
 ```
 
+## Web Dashboard
+
+AgentTrace includes a web dashboard for visualizing and analyzing your traces and evaluations.
+
+![AgentTrace Dashboard](https://i.imgur.com/8CkyyG8.png)
 
 ## Quick Start
 
 ### Basic Tracing
+
+
+![AgentTrace Example](https://i.imgur.com/5Lg2Lda.png)
+
 
 ```python
 from agenttrace import TraceManager, TracerEval
@@ -91,6 +100,17 @@ print(response)
 ```
 
 ### Using the Evaluation Framework
+
+AgentTrace includes a powerful evaluation framework that allows you to assess the performance of your AI agents and models. The evaluation framework helps you:
+
+1. Define test cases with expected outputs
+2. Run your agent or model against these test cases
+3. Score the outputs using custom evaluation functions
+4. Track performance over time
+
+Here's a simple example of evaluating a model's ability to identify the capital of France:
+
+![AgentTrace Evaluation Interface](https://i.imgur.com/zweI2m8.png)
 
 ```python
 from agenttrace import TracerEval
