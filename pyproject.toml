@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agenttrace"
-version = "0.1.0"
-description = "A tool for evaluating and tracing tensor operations"
+version = "0.1.2"
+description = "A lightweight and hackable tracing/evaluation framework for AI agents and language models"
 readme = "README.md"
 authors = [
     {name = "TensorStax", email = "info@tensorstax.com"}
