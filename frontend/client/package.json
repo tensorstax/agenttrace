@@ -1,5 +1,5 @@
 {
-  "name": "@tensorscope/frontend",
+  "name": "@agenttrace/frontend",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -51,7 +51,7 @@
     "typescript-eslint": "^8.24.1",
     "vite": "^6.2.3"
   },
-  "description": "Frontend for TensorScope: ML monitoring and visualization tool",
+  "description": "Frontend for agenttrace: ML monitoring and visualization tool",
   "main": "src/main.tsx",
   "keywords": [
     "tensor",
