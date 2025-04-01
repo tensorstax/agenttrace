@@ -1,9 +1,9 @@
 """
-Basic tests for the tensorscope package.
+Basic tests for the agenttrace package.
 """
 
 import unittest
-from tensorscope import TraceManager, TracerEval
+from agenttrace import TraceManager, TracerEval
 
 class TestTraceManager(unittest.TestCase):
     """Test the TraceManager class."""

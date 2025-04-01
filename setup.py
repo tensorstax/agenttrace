@@ -1,5 +1,5 @@
 """
-Setup script for the tensorscope package.
+Setup script for the agenttrace package.
 """
 
 from setuptools import setup
@@ -8,6 +8,6 @@ from setuptools import setup
 # most settings are in pyproject.toml and/or setup.cfg
 setup(
     package_dir={"": "src"},
-    packages=["tensorscope"],
+    packages=["agenttrace"],
     include_package_data=True,
 )

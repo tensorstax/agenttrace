@@ -1,4 +1,4 @@
-from tensorscope import TracerEval
+from agenttrace import TracerEval
 import asyncio
 from openai import AsyncOpenAI
 

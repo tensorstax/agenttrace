@@ -1,5 +1,5 @@
 """
-agenttrace - A tool for evaluating and tracing tensor operations.
+AgentTrace - A tool for evaluating and tracing agent operations.
 """
 
 # Import main classes to make them available at the top level

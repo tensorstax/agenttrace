@@ -7,7 +7,7 @@ import { dbRoutes } from './routes/dbRoutes';
 
 // Create Express app
 const app = express();
-const PORT = process.env.PORT || 3002;
+const PORT = process.env.PORT || 3033;
 
 // Middleware
 app.use(cors());

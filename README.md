@@ -148,7 +148,7 @@ npm run start
 ```
 
 This will start:
-- The backend API server on port 3002
+- The backend API server on port 3033
 - The frontend web interface on port 5173
 
 Open your browser and go to `http://localhost:5173` to access the interface.
