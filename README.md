@@ -1,38 +1,32 @@
-[# TensorScope
+# AgentTrace
 
-![TensorScope](https://i.imgur.com/DFtbGu0.png)
+![AgentTrace](https://i.imgur.com/DFtbGu0.png)
 
-TensorScope is a lightweight and hackable tracing/evaluation framework for AI agents and language models. It provides local monitoring and debugging capabilities, making it easier to build reliable and performant AI systems.
+AgentTrace is a lightweight and hackable tracing/evaluation framework for AI agents and language models. It provides local monitoring and debugging capabilities, making it easier to build reliable and performant AI systems.
 
 ## Installation
 
-You can install TensorScope directly from PyPI:
+You can install AgentTrace directly from PyPI:
 
 ```bash
-pip install tensorscope
+pip install agenttrace
 ```
 
 Or install from source:
 
 ```bash
-git clone https://github.com/tensorstax/tensorscope.git
-cd tensorscope
+git clone https://github.com/tensorstax/agenttrace.git
+cd agenttrace
 pip install -e .
 ```
 
-## Features
-
-- **Trace Tensor Operations**: Monitor tensor shape, data type, and value changes throughout your model's execution
-- **Performance Profiling**: Track execution time of operations
-- **Interactive Visualization**: Web-based UI for exploring traces and evaluation results
-- **Evaluation Framework**: Test and benchmark your models with structured evaluations
 
 ## Quick Start
 
 ### Basic Tracing
 
 ```python
-from tensorscope import TraceManager, TracerEval
+from agenttrace import TraceManager, TracerEval
 
 tracer = TraceManager(db_path="traces.db")
 
@@ -93,13 +87,13 @@ response = asyncio.run(create_async_chat_completion(
     tools=[get_capital_tool]
 ))
 print(response)
-# You can now view the traces in the web interface with: tensorscope start
+# You can now view the traces in the web interface with: agenttrace start
 ```
 
 ### Using the Evaluation Framework
 
 ```python
-from tensorscope import TracerEval
+from agenttrace import TracerEval
 import asyncio
 from openai import AsyncOpenAI
 
@@ -137,14 +131,14 @@ if __name__ == "__main__":
 
 ## Web Interface
 
-TensorScope includes a web-based interface for visualizing traces and evaluation results.
+agenttrace includes a web-based interface for visualizing traces and evaluation results.
 
 ### Starting the Web Interface
 
 
 ```bash
-# Or navigate to the tensorscope/frontend directory
-cd tensorscope/frontend
+# Or navigate to the agenttrace/frontend directory
+cd agenttrace/frontend
 
 # Install dependencies if this is your first time
 npm run install:all
@@ -162,10 +156,10 @@ Open your browser and go to `http://localhost:5173` to access the interface.
 
 ### Customizing Trace Storage
 
-By default, Tensorscope stores traces in a SQLite database at `traces.db` in the current directory. You can customize this:
+By default, AgentTrace stores traces in a SQLite database at `traces.db` in the current directory. You can customize this:
 
 ```python
-from tensorscope import TraceManager
+from agenttrace import TraceManager
 
 # Use a custom database path
 tm = TraceManager(db_path="/path/to/custom/traces.db")
@@ -187,4 +181,3 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details. 
-](https://github.com/tensorstax/tensorscope.git)
