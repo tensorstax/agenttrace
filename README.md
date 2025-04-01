@@ -2,7 +2,7 @@
 
 ![AgentTrace](https://i.imgur.com/OAoerbl.png)
 
-AgentTrace is a lightweight and hackable tracing/evaluation framework for AI agents and language models by [tensorstax.com](https://tensorstax.com) TensorStax. It provides local monitoring and debugging capabilities, making it easier to build reliable and performant AI systems.
+AgentTrace is a lightweight and hackable tracing/evaluation framework for AI agents and language models by [TensorStax](https://tensorstax.com) . It provides local monitoring and debugging capabilities, making it easier to build reliable and performant AI systems.
 
 ## Web Dashboard
 
