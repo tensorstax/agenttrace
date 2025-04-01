@@ -1,4 +1,4 @@
-# TensorScope
+[# TensorScope
 
 ![TensorScope](https://i.imgur.com/DFtbGu0.png)
 
@@ -187,3 +187,4 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details. 
+](https://github.com/tensorstax/tensorscope.git)
