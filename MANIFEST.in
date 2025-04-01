@@ -4,5 +4,5 @@ include pyproject.toml
 include setup.cfg
 include setup.py
 
-recursive-include src/tensorscope *.py
-recursive-include src/tensorscope py.typed
+recursive-include src/agenttrace *.py
+recursive-include src/agenttrace py.typed

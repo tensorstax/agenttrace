@@ -3,7 +3,7 @@ requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "tensorscope"
+name = "agenttrace"
 version = "0.1.0"
 description = "A tool for evaluating and tracing tensor operations"
 readme = "README.md"
@@ -27,8 +27,8 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/tensorstax/tensorscope"
-Issues = "https://github.com/tensorstax/tensorscope/issues"
+Homepage = "https://github.com/tensorstax/agenttrace"
+Issues = "https://github.com/tensorstax/agenttrace/issues"
 
 [project.scripts]
-tensorscope = "tensorscope.cli:main" 
+agenttrace = "agenttrace.cli:main" 

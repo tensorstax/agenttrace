@@ -1,6 +1,6 @@
-# Tensorscope Frontend
+# AgentTrace Frontend
 
-This directory contains the web interface for Tensorscope, which consists of:
+This directory contains the web interface for AgentTrace, which consists of:
 
 1. A backend API server (Express.js) that provides trace and evaluation data
 2. A frontend web application (React) that visualizes the data
@@ -44,7 +44,7 @@ npm run start
 ```
 
 This will:
-- Start the backend API server on port 3002
+- Start the backend API server on port 3033
 - Start the frontend web application on port 5173
 
 Once running, you can open your browser and go to:
@@ -76,7 +76,7 @@ This will create a production build of the client application in the `client/dis
 
 ### Port Conflicts
 
-If you have services already running on ports 3002 or 5173, you may see errors when starting the web interface. To resolve this:
+If you have services already running on ports 3033 or 5173, you may see errors when starting the web interface. To resolve this:
 
 1. For the backend server, modify the port in `server/index.ts`
 2. For the frontend, modify the port in the `client/vite.config.ts` file and update the proxy configuration to match the backend port 
